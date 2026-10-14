@@ -1,0 +1,50 @@
+name: Daily AI & Tech Briefing Agent
+
+on:
+  schedule:
+    # 02:00 UTC = 07:00 AM PKT (Pakistan Standard Time, UTC+5)
+    # Runs every day automatically, even when your personal computer is off.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allows 1-click manual trigger anytime from the GitHub Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  run-briefing:
+    name: Run 24h Intelligence Sweep & Dispatch Brief
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute Daily Intelligence Briefing Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL || 'muhammadtalhpro1@gmail.com' }}
+        run: |
+          python main.py --run-now
+
+      - name: Upload Brief PDF Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-ai-tech-brief
+          path: reports/*.pdf
+          retention-days: 14
+          if-no-files-found: ignore
