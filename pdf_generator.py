@@ -1,5 +1,4 @@
-"""High-fidelity PDF Generator for Daily AI & Tech Intelligence Briefings."""
-
+import html
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
@@ -17,6 +16,13 @@ from reportlab.platypus import (
     KeepTogether,
 )
 from reportlab.pdfgen import canvas
+
+
+def safe_xml(val: Any) -> str:
+    """Sanitize text for ReportLab XML parser to prevent syntax errors on &, <, >."""
+    if val is None:
+        return ""
+    return html.escape(str(val))
 
 
 class NumberedCanvas(canvas.Canvas):
@@ -182,7 +188,7 @@ def build_brief_pdf(
     ]
     for idx, h in enumerate(exec_highlights[:3], 1):
         exec_content.append(
-            Paragraph(f"<b>{idx}.</b> {h}", exec_item_style)
+            Paragraph(f"<b>{idx}.</b> {safe_xml(h)}", exec_item_style)
         )
 
     exec_table = Table(
@@ -235,14 +241,14 @@ def build_brief_pdf(
             )
         else:
             for item in items:
-                name = item.get("name", "Update")
-                creator = item.get("creator", "")
+                name = safe_xml(item.get("name", "Update"))
+                creator = safe_xml(item.get("creator", ""))
                 creator_str = f" ({creator})" if creator else ""
-                summary = item.get("summary", "")
+                summary = safe_xml(item.get("summary", ""))
                 source_url = item.get("source_url", "")
 
                 source_link = (
-                    f' <font color="#1d4ed8"><u><a href="{source_url}">(Source)</a></u></font>'
+                    f' <font color="#1d4ed8"><u><a href="{html.escape(source_url, quote=True)}">(Source)</a></u></font>'
                     if source_url
                     else ""
                 )

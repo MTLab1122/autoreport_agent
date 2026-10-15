@@ -1,0 +1,108 @@
+name: Daily AI & Tech Intelligence Brief
+
+on:
+  schedule:
+    # 02:00 UTC = 07:00 AM PKT (Pakistan Standard Time, UTC+5)
+    # Triggers autonomously every morning, even when personal devices are offline
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Perform dry-run (generate PDF without dispatching live email)'
+        required: false
+        type: boolean
+        default: false
+      recipient:
+        description: 'Override recipient email address (leave blank for default)'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: daily-intelligence-brief
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run-daily-brief:
+    name: Run 24h Intelligence Sweep & Dispatch Brief
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore accumulated reports from cache
+        uses: actions/cache@v4
+        with:
+          path: reports/
+          key: reports-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            reports-cache-${{ runner.os }}-
+
+      - name: Ensure workspace directories exist
+        run: |
+          mkdir -p reports logs
+
+      - name: Execute Daily Intelligence Briefing Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient || secrets.RECIPIENT_EMAIL || 'muhammadtalhapro1@gmail.com' }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-3-flash-preview' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FLAGS="--run-now"
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            FLAGS="--dry-run"
+          fi
+          python main.py $FLAGS
+
+      - name: Send Failure Alert Notification
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient || secrets.RECIPIENT_EMAIL || 'muhammadtalhapro1@gmail.com' }}
+        run: |
+          python -c "
+          from emailer import send_failure_alert
+          import glob, os
+          logs = sorted(glob.glob('logs/*.log'))
+          snippet = ''
+          if logs:
+              try:
+                  with open(logs[-1], 'r', encoding='utf-8') as f:
+                      snippet = f.read()[-1500:]
+              except Exception:
+                  pass
+          send_failure_alert(
+              error_message='GitHub Actions daily briefing job encountered an error.',
+              log_snippet=snippet,
+              recipient_email=os.getenv('RECIPIENT_EMAIL')
+          )
+          " || true
+
+      - name: Upload Brief PDFs and Execution Logs as Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-ai-tech-brief-run-${{ github.run_number }}
+          path: |
+            reports/*.pdf
+            logs/*.log
+          retention-days: 30
+          if-no-files-found: ignore

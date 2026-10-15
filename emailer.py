@@ -10,13 +10,16 @@ from dotenv import load_dotenv
 # Ensure environment variables are loaded
 load_dotenv()
 
+from config import config
+
 # Constants for Resend API
 RESEND_API_URL = "https://api.resend.com/emails"
 SENDER = "AI Tech Agent <onboarding@resend.dev>"
-RECIPIENTS: List[str] = [os.getenv("RECIPIENT_EMAIL", "muhammadtalhpro1@gmail.com")]
 
 
-def compose_email_payload(report_data: Dict[str, Any], pdf_path: Path) -> Dict[str, Any]:
+def compose_email_payload(
+    report_data: Dict[str, Any], pdf_path: Path = None, recipient_email: str = None
+) -> Dict[str, Any]:
     """Construct the Resend email JSON payload with briefing highlights and PDF attachment."""
     date_str = report_data.get("date", "Today")
     top_headline = report_data.get("top_headline", "Frontier AI Releases & Breakthroughs")
@@ -37,12 +40,12 @@ Top 3 Highlights Today:
 2. {h2}
 3. {h3}
 
-Full breakdown is in the attached PDF.
+Full breakdown across all 5 intelligence pillars is available in the attached publication-grade PDF.
 """
 
     body_html = f"""<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px;">
   <h2 style="color: #0f172a; margin-bottom: 8px;">⚡ Daily AI &amp; Tech Intelligence Brief</h2>
-  <p style="color: #64748b; font-size: 14px; margin-top: 0;">Date: {date_str}</p>
+  <p style="color: #64748b; font-size: 14px; margin-top: 0;">Date: {date_str} &bull; Delivery: 07:00 AM</p>
   <p>Hi Muhammad,</p>
   <p>Attached is your precision AI &amp; Tech Intelligence Brief for <strong>{date_str}</strong>.</p>
   <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
@@ -56,9 +59,11 @@ Full breakdown is in the attached PDF.
   <p style="font-size: 14px; color: #475569;">Full breakdown across all 5 intelligence pillars is available in the attached PDF.</p>
 </div>"""
 
+    target_email = (recipient_email or config.recipient_email).strip()
+
     payload: Dict[str, Any] = {
         "from": SENDER,
-        "to": [os.getenv("RECIPIENT_EMAIL", "muhammadtalhpro1@gmail.com")],
+        "to": [target_email],
         "subject": subject,
         "text": body_text,
         "html": body_html,
@@ -75,7 +80,7 @@ Full breakdown is in the attached PDF.
             "filename": pdf_path_obj.name,
             "content": encoded_pdf,
         })
-    else:
+    elif pdf_path:
         print(f"[Emailer Warning] PDF attachment not found at {pdf_path}")
 
     if attachments:
@@ -88,15 +93,13 @@ Full breakdown is in the attached PDF.
 compose_email = compose_email_payload
 
 
-def send_daily_brief_email(report_data: Dict[str, Any], pdf_path: Path) -> bool:
-    """Dispatch briefing email via the Resend HTTP API.
+def send_daily_brief_email(
+    report_data: Dict[str, Any], pdf_path: Path = None, recipient_email: str = None
+) -> bool:
+    """Dispatch briefing email via the Resend HTTP API."""
+    resend_api_key = config.resend_api_key
 
-    Reads RESEND_API_KEY from environment, attaches base64-encoded PDF,
-    and logs exact HTTP responses upon failure or success.
-    """
-    resend_api_key = os.getenv("RESEND_API_KEY", "").strip()
-
-    payload = compose_email_payload(report_data, pdf_path)
+    payload = compose_email_payload(report_data, pdf_path, recipient_email)
     recipient_display = ", ".join(payload.get("to", []))
     subject = payload.get("subject", "")
 
@@ -108,12 +111,10 @@ def send_daily_brief_email(report_data: Dict[str, Any], pdf_path: Path) -> bool:
         att_name = payload["attachments"][0].get("filename")
         print(f"  • Attachment: {att_name}")
 
-    if not resend_api_key:
+    if not config.has_resend_key():
         print("\n" + "=" * 70)
-        print("[Emailer Error] RESEND_API_KEY is not configured!")
-        print("Please set the RESEND_API_KEY environment variable in your .env file:")
-        print("  RESEND_API_KEY=re_your_api_key_here")
-        print("You can obtain an API key at: https://resend.com/api-keys")
+        print("[Emailer Error] RESEND_API_KEY is not configured or invalid!")
+        print("Please configure RESEND_API_KEY in your .env or GitHub Secrets.")
         print("=" * 70 + "\n")
         return False
 
@@ -138,45 +139,72 @@ def send_daily_brief_email(report_data: Dict[str, Any], pdf_path: Path) -> bool:
             print(f"  • Resend ID: {resend_id}")
             print(f"  • Recipient: {recipient_display}")
             return True
-        elif response.status_code == 403 and "only send testing emails to your own email address" in response.text:
-            print("\n" + "=" * 70)
-            print(f"[Emailer Sandbox Notice] Resend test domain restricted delivery to your registered account.")
-            print(f"  • Target: {recipient_display}")
-            print(f"  • Response Body: {response.text}")
-            fallback_target = ["muhammadtalhapro1@gmail.com"]
-            print(f"[Emailer] Attempting delivery to registered Resend account: {fallback_target}...")
-            payload_fallback = dict(payload)
-            payload_fallback["to"] = fallback_target
-            fb_response = requests.post(RESEND_API_URL, headers=headers, json=payload_fallback, timeout=30)
-            if 200 <= fb_response.status_code < 300:
-                resp_data = fb_response.json() if "application/json" in fb_response.headers.get("Content-Type", "") else {}
-                resend_id = resp_data.get("id", "N/A")
-                print(f"[Emailer Success] Intelligence brief delivered to registered account inbox!")
-                print(f"  • Resend ID: {resend_id}")
-                print(f"  • Recipient: {fallback_target}")
-                print("=" * 70 + "\n")
-                return True
-            else:
-                print(f"[Emailer Error] Delivery to fallback failed: {fb_response.status_code} - {fb_response.text}")
-                print("=" * 70 + "\n")
-                return False
-        else:
-            print("\n" + "=" * 70)
-            print(f"[Emailer Error] Resend API rejected email delivery!")
-            print(f"  • HTTP Status: {response.status_code}")
-            print(f"  • Reason: {response.reason}")
-            print(f"  • Response Body: {response.text}")
-            print("=" * 70 + "\n")
-            return False
+
+        # Handle Resend sandbox restriction (when using onboarding@resend.dev with unverified domain)
+        if response.status_code == 403 and "only send testing emails to your own email address" in response.text:
+            print(f"[Emailer Sandbox Notice] Resend sandbox restriction: {response.text}")
+            fallback_target = "muhammadtalhapro1@gmail.com"
+            if recipient_display != fallback_target:
+                print(f"[Emailer] Retrying dispatch to verified account address ({fallback_target})...")
+                payload_fallback = dict(payload)
+                payload_fallback["to"] = [fallback_target]
+                fb_response = requests.post(RESEND_API_URL, headers=headers, json=payload_fallback, timeout=30)
+                if 200 <= fb_response.status_code < 300:
+                    resp_data = fb_response.json() if "application/json" in fb_response.headers.get("Content-Type", "") else {}
+                    resend_id = resp_data.get("id", "N/A")
+                    print(f"[Emailer Success] Brief delivered to verified account inbox ({fallback_target})! Resend ID: {resend_id}")
+                    return True
+                else:
+                    print(f"[Emailer Error] Fallback dispatch failed: {fb_response.status_code} - {fb_response.text}")
+                    return False
+
+        print("\n" + "=" * 70)
+        print(f"[Emailer Error] Resend API rejected email delivery!")
+        print(f"  • HTTP Status: {response.status_code}")
+        print(f"  • Reason: {response.reason}")
+        print(f"  • Response Body: {response.text}")
+        print("=" * 70 + "\n")
+        return False
 
     except requests.exceptions.RequestException as e:
-        print("\n" + "=" * 70)
         print(f"[Emailer Error] Network / HTTP request exception while contacting Resend API: {e}")
-        if hasattr(e, "response") and e.response is not None:
-            print(f"  • HTTP Status: {e.response.status_code}")
-            print(f"  • Response Body: {e.response.text}")
-        print("=" * 70 + "\n")
         return False
     except Exception as e:
         print(f"[Emailer Error] Unexpected error during email dispatch: {e}")
+        return False
+
+
+def send_failure_alert(
+    error_message: str, log_snippet: str = "", recipient_email: str = None
+) -> bool:
+    """Send an automated failure notification when the briefing pipeline fails."""
+    if not config.has_resend_key():
+        return False
+
+    target_email = (recipient_email or config.recipient_email).strip()
+    headers = {
+        "Authorization": f"Bearer {config.resend_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "from": SENDER,
+        "to": [target_email],
+        "subject": "⚠️ Alert: Daily AI & Tech Briefing Pipeline Encountered an Error",
+        "text": f"The daily briefing pipeline failed.\n\nError:\n{error_message}\n\nLog Details:\n{log_snippet}",
+        "html": f"""<div style="font-family: sans-serif; line-height: 1.5; color: #1e293b;">
+          <h2 style="color: #b91c1c;">⚠️ Daily AI &amp; Tech Briefing Failed</h2>
+          <p>The daily briefing pipeline encountered an error during automated execution.</p>
+          <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; margin: 12px 0;">
+            <p><strong>Error:</strong> {error_message}</p>
+          </div>
+          {f'<pre style="background: #f1f5f9; padding: 10px; font-size: 12px; overflow-x: auto;">{log_snippet}</pre>' if log_snippet else ''}
+          <p style="font-size: 13px; color: #64748b;">Check the GitHub Actions artifacts and logs for full stack traces.</p>
+        </div>""",
+    }
+
+    try:
+        resp = requests.post(RESEND_API_URL, headers=headers, json=payload, timeout=15)
+        return 200 <= resp.status_code < 300
+    except Exception:
         return False

@@ -20,7 +20,7 @@ $Action = New-ScheduledTaskAction -Execute $ActionPath -WorkingDirectory $Script
 $Trigger = New-ScheduledTaskTrigger -Daily -At $TriggerTime
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Daily 24-hour sweep of AI & Tech landscape, PDF generation, and email to muhammadtalhpro1@gmail.com"
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Daily 24-hour sweep of AI & Tech landscape, PDF generation, and email to muhammadtalhapro1@gmail.com"
 
 Write-Host "Task '$TaskName' registered successfully!"
 Write-Host "Status:"

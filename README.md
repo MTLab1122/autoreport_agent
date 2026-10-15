@@ -1,6 +1,6 @@
 # ⚡ Autonomous AI & Tech Intelligence Briefing Agent
 
-An autonomous intelligence agent that executes a daily 24-hour sweep of the global artificial intelligence and technology landscape, filters exclusively for high-signal updates with zero fluff, formats a structured executive PDF brief, and emails it daily at **07:00 AM** to `muhammadtalhpro1@gmail.com`.
+An autonomous intelligence agent that executes a daily 24-hour sweep of the global artificial intelligence and technology landscape, filters exclusively for high-signal updates with zero fluff, formats a structured executive PDF brief, and emails it daily at **07:00 AM PKT (02:00 UTC)** to `muhammadtalhapro1@gmail.com`.
 
 ---
 
@@ -17,73 +17,104 @@ An autonomous intelligence agent that executes a daily 24-hour sweep of the glob
 ## ⚙️ Architecture & File Structure
 
 ```
-c:\Users\muham\Desktop\Updates_Agent\
+Updates_Agent/
+│
+├── .github/workflows/
+│   └── daily-agent.yml        # GitHub Actions workflow (Daily 7:00 AM PKT cron + manual dispatch)
 │
 ├── .env.example               # Template for Gemini API and Resend API credentials
 ├── .env                       # Local secrets (GEMINI_API_KEY, RESEND_API_KEY)
 ├── requirements.txt           # Python dependencies (google-genai, reportlab, requests, etc.)
 ├── config.py                  # Dataclass config & environment variable loader
 │
-├── sources.py                 # Live 24-hour aggregator (Hacker News, Hugging Face, GitHub)
-├── synthesizer.py             # Gemini 3.8 Flash + Google Search Grounding engine
-├── pdf_generator.py           # Publication-grade ReportLab PDF compiler
-├── emailer.py                 # Resend HTTP API email dispatcher with base64 PDF attachment
-├── main.py                    # Unified CLI entrypoint (--run-now, --schedule)
+├── sources.py                 # Live parallel 24h aggregator (Hacker News, Hugging Face, GitHub)
+├── synthesizer.py             # Multi-tier Gemini synthesis engine with JSON mode & offline fallback
+├── pdf_generator.py           # Publication-grade ReportLab PDF compiler with XML sanitization
+├── emailer.py                 # Resend HTTP API email dispatcher & failure alert notifier
+├── main.py                    # Unified CLI entrypoint (--run-now, --dry-run, --verify, --schedule)
 │
 ├── run_agent.bat              # Batch runner used by Windows Task Scheduler
-├── setup_task_scheduler.ps1   # PowerShell automation script for Task Scheduler
+├── setup_task_scheduler.ps1   # PowerShell automation script for local Windows Task Scheduler
 │
-├── reports/                   # Generated daily PDF briefs
-│   └── AI_Tech_Brief_YYYY-MM-DD.pdf
-└── logs/                      # Execution logs for scheduled morning runs
+├── reports/                   # Generated daily PDF briefs (Daily_AI_Tech_Brief_YYYY-MM-DD.pdf)
+└── logs/                      # Dual execution logs for each morning run
 ```
 
 ---
 
-## 🔑 Configuration (`.env`)
+## 🔑 Configuration (`.env` & GitHub Secrets)
 
 Copy `.env.example` to `.env` or edit `.env` directly:
 
 ```env
-# 1. Gemini API Key (Gemini 3.8 Flash with Google Search Grounding)
-# Get a key from: https://aistudio.google.com/app/apikey
+# 1. Gemini API Key (Gemini API with Google Search & JSON mode)
+# Obtain from: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_gemini_api_key_here
 
 # 2. Resend API Key (Required for email delivery via Resend HTTP API)
-# Get your API key from: https://resend.com/api-keys
+# Obtain from: https://resend.com/api-keys
 RESEND_API_KEY=re_your_api_key_here
 
-# 3. Schedule Time (24h format, default 07:00 AM)
+# 3. Email Delivery Settings
+RECIPIENT_EMAIL=muhammadtalhapro1@gmail.com
+
+# 4. Schedule Time (24h format, default 07:00 AM)
 SCHEDULE_TIME=07:00
+
+# 5. Model Selection (defaults to gemini-3-flash-preview, with automatic fallback)
+GEMINI_MODEL=gemini-3-flash-preview
 ```
+
+### GitHub Repository Secrets
+When hosting on GitHub Actions, add these repository secrets under **Settings > Secrets and variables > Actions**:
+
+| Secret Name | Description | Example / Default |
+|-------------|-------------|-------------------|
+| `GEMINI_API_KEY` | Google AI Studio Gemini API Key | Required |
+| `RESEND_API_KEY` | Resend API Key for sending emails | Required (`re_...`) |
+| `RECIPIENT_EMAIL` | Destination email address | `muhammadtalhapro1@gmail.com` |
+| `GEMINI_MODEL` | (Optional) Primary Gemini model | `gemini-3-flash-preview` |
+
+*(Note: `GITHUB_TOKEN` is automatically provided by GitHub Actions to grant 1,000 requests/hr for GitHub Trending aggregation).*
 
 ---
 
 ## 🚀 Usage
 
-### 1. Execute an Immediate Sweep & Generate PDF
-Run the complete pipeline right now:
+### 1. Verify Configuration & Credentials
+```powershell
+.\.venv\Scripts\python.exe main.py --verify
+```
+
+### 2. Run a Dry-Run (Full Pipeline without sending live email)
+```powershell
+.\.venv\Scripts\python.exe main.py --dry-run
+```
+
+### 3. Execute Immediate Live Sweep, Generate PDF, and Send Email
 ```powershell
 .\.venv\Scripts\python.exe main.py --run-now
 ```
 Or double-click `run_agent.bat`.
 
-### 2. Daily Autonomous Schedule (07:00 AM)
-- **Windows Task Scheduler (Active & Recommended):** The task `AITechIntelligenceBrief` is already registered and configured to execute daily at `07:00 AM` in the background.
-  To re-register or adjust:
-  ```powershell
-  powershell -ExecutionPolicy Bypass -File .\setup_task_scheduler.ps1
-  ```
-- **In-Process Python Daemon (Alternative):**
-  ```powershell
-  .\.venv\Scripts\python.exe main.py --schedule
-  ```
+### 4. Continuous In-Process Python Daemon (Local Alternative)
+```powershell
+.\.venv\Scripts\python.exe main.py --schedule
+```
+
+### 5. Local Windows Task Scheduler (07:00 AM Daily)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_task_scheduler.ps1
+```
 
 ---
 
-## 📄 Sample Generated Brief
-The report compiler strictly satisfies all styling rules:
-- Clean 1–2 page executive layout with subtle borders and dividers.
-- Executive summary callout box with the top 3 headlines of the day.
-- Every item formatted as `**[Product/Model Name] ([Company/Creator]):** [Summary]. (Source)` with clickable citations.
-- Dynamic page numbering (`Page X of Y`) and running header/footer.
+## ⏰ GitHub Actions Automation
+
+The workflow file [`.github/workflows/daily-agent.yml`](.github/workflows/daily-agent.yml) is fully configured:
+- **Schedule**: Every day at **07:00 AM PKT** (`02:00 UTC`), cron: `0 2 * * *`.
+- **Manual Trigger**: Go to **Actions > Daily AI & Tech Intelligence Brief > Run workflow** (supports dry-run and recipient override).
+- **Persistent Storage**: Utilizes `actions/cache@v4` to accumulate prior PDF briefs.
+- **Artifact Downloads**: Automatically uploads `reports/*.pdf` and `logs/*.log` to GitHub Actions run artifacts (retained for 30 days).
+- **Failure Notification**: If any step encounters an error, an automated failure email alert is immediately sent via Resend.
+

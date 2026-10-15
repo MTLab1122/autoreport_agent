@@ -1,47 +1,62 @@
-"""Aggregator module for gathering AI and Tech signals across live sources from the last 24 hours."""
-
+import os
 import datetime
 import time
-import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Any
+import requests
+
+
+def _fetch_single_hn_keyword(kw: str, cutoff_ts: int) -> List[Dict[str, Any]]:
+    """Fetch stories for a single keyword from HN Algolia."""
+    url = (
+        f"https://hn.algolia.com/api/v1/search_by_date?"
+        f"tags=story&numericFilters=created_at_i>{cutoff_ts}&query={kw}&hitsPerPage=15"
+    )
+    items = []
+    try:
+        resp = requests.get(url, timeout=8)
+        if resp.status_code == 200:
+            hits = resp.json().get("hits", [])
+            for h in hits:
+                story_id = h.get("objectID")
+                points = h.get("points") or 0
+                title = h.get("title", "")
+                story_url = h.get("url") or f"https://news.ycombinator.com/item?id={story_id}"
+                comments = h.get("num_comments") or 0
+                if points >= 3 or comments >= 3:
+                    items.append({
+                        "story_id": story_id,
+                        "source": "Hacker News",
+                        "title": title,
+                        "url": story_url,
+                        "points": points,
+                        "comments": comments,
+                        "created_at": h.get("created_at"),
+                    })
+    except Exception as e:
+        print(f"[Warning] Failed to fetch HN for query '{kw}': {e}")
+    return items
 
 
 def fetch_hacker_news_stories(lookback_hours: int = 24) -> List[Dict[str, Any]]:
-    """Fetch high-signal AI/Tech stories from Hacker News posted in the last 24 hours."""
+    """Fetch high-signal AI/Tech stories from Hacker News posted in the last 24 hours in parallel."""
     cutoff_ts = int(time.time()) - (lookback_hours * 3600)
     keywords = ["AI", "LLM", "OpenAI", "Anthropic", "Google", "DeepSeek", "Meta", "NVIDIA", "agent", "vLLM"]
     stories = []
     seen_ids = set()
 
-    for kw in keywords:
-        url = (
-            f"https://hn.algolia.com/api/v1/search_by_date?"
-            f"tags=story&numericFilters=created_at_i>{cutoff_ts}&query={kw}&hitsPerPage=15"
-        )
-        try:
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                hits = resp.json().get("hits", [])
-                for h in hits:
-                    story_id = h.get("objectID")
-                    if story_id not in seen_ids:
-                        seen_ids.add(story_id)
-                        points = h.get("points") or 0
-                        title = h.get("title", "")
-                        story_url = h.get("url") or f"https://news.ycombinator.com/item?id={story_id}"
-                        comments = h.get("num_comments") or 0
-                        # Filter for relevance & signal
-                        if points >= 3 or comments >= 3:
-                            stories.append({
-                                "source": "Hacker News",
-                                "title": title,
-                                "url": story_url,
-                                "points": points,
-                                "comments": comments,
-                                "created_at": h.get("created_at")
-                            })
-        except Exception as e:
-            print(f"[Warning] Failed to fetch HN for query '{kw}': {e}")
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_kw = {executor.submit(_fetch_single_hn_keyword, kw, cutoff_ts): kw for kw in keywords}
+        for future in as_completed(future_to_kw):
+            try:
+                for item in future.result():
+                    sid = item.get("story_id")
+                    if sid not in seen_ids:
+                        seen_ids.add(sid)
+                        stories.append(item)
+            except Exception as e:
+                kw = future_to_kw[future]
+                print(f"[Warning] Error processing HN keyword '{kw}': {e}")
 
     # Sort by points descending
     stories.sort(key=lambda x: x["points"], reverse=True)
@@ -71,6 +86,8 @@ def fetch_huggingface_daily_papers() -> List[Dict[str, Any]]:
                     "url": paper_url,
                     "upvotes": upvotes
                 })
+        else:
+            print(f"[Warning] Hugging Face returned status code {resp.status_code}")
     except Exception as e:
         print(f"[Warning] Failed to fetch Hugging Face papers: {e}")
     return papers
@@ -81,6 +98,12 @@ def fetch_github_trending_ai(days_back: int = 3) -> List[Dict[str, Any]]:
     date_str = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days_back)).strftime("%Y-%m-%d")
     url = f"https://api.github.com/search/repositories?q=topic:ai+created:>{date_str}&sort=stars&order=desc&per_page=15"
     headers = {"User-Agent": "AITechBriefAgent/1.0"}
+    
+    # Use GitHub token if available (e.g. from GitHub Actions secrets.GITHUB_TOKEN) to avoid 403 rate limits
+    gh_token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if gh_token:
+        headers["Authorization"] = f"Bearer {gh_token.strip()}"
+
     repos = []
     try:
         resp = requests.get(url, headers=headers, timeout=10)
@@ -95,6 +118,8 @@ def fetch_github_trending_ai(days_back: int = 3) -> List[Dict[str, Any]]:
                     "url": r.get("html_url"),
                     "language": r.get("language") or "Python"
                 })
+        else:
+            print(f"[Warning] GitHub API returned status {resp.status_code}: {resp.text[:120]}")
     except Exception as e:
         print(f"[Warning] Failed to fetch GitHub trending: {e}")
     return repos

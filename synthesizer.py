@@ -82,19 +82,42 @@ You MUST respond with valid JSON matching this schema:
 def clean_json_response(raw_text: str) -> Dict[str, Any]:
     """Clean markdown fences and parse JSON safely."""
     text = raw_text.strip()
-    # Strip markdown code blocks if present
     if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
-        text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
     text = text.strip()
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        raise
+
+
+def _validate_brief_structure(data: Dict[str, Any], current_date: str) -> Dict[str, Any]:
+    """Ensure all required keys and structures are present."""
+    if not isinstance(data, dict):
+        raise ValueError("Model output is not a JSON object")
+
+    data.setdefault("date", current_date)
+    data.setdefault("top_headline", "AI & Tech Intelligence Brief")
+    data.setdefault("highlights", ["Frontier model and industry breakthroughs."])
+    for p in ["pillar_1", "pillar_2", "pillar_3", "pillar_4", "pillar_5"]:
+        if p not in data or not isinstance(data[p], list):
+            data[p] = []
+    return data
 
 
 def synthesize_with_gemini(raw_signals_text: str, current_date: str) -> Dict[str, Any]:
-    """Call Gemini 3.8 Flash with Google Search Grounding to generate the briefing."""
+    """Call Gemini API with structured JSON output mode and multi-model fallbacks."""
     from google import genai
+    from google.genai import types
 
-    client = genai.Client(api_key=config.gemini_api_key)
+    client = genai.Client(
+        api_key=config.gemini_api_key,
+        http_options=types.HttpOptions(timeout=20000),
+    )
 
     user_prompt = f"""Today is {current_date}.
 Execute the 24-hour sweep of the global technology and artificial intelligence landscape for the past 24 hours.
@@ -102,31 +125,35 @@ Execute the 24-hour sweep of the global technology and artificial intelligence l
 Below is live telemetry gathered from real-time feeds in the last 24 hours to assist your sweep:
 {raw_signals_text}
 
-Perform an exhaustive sweep across Google Search for today's breaking AI releases, model launches, tool updates, industry moves, practitioner workflows, and trending repos from the last 24 hours.
-Apply zero-fluff synthesis and return ONLY the structured JSON object.
+Perform an exhaustive synthesis across today's breaking AI releases, model launches, tool updates, industry moves, practitioner workflows, and trending repos from the last 24 hours.
+Apply zero-fluff synthesis and return ONLY the structured JSON object matching the requested schema.
 """
 
-    try:
-        # Use interactions.create with Google Search grounding
-        interaction = client.interactions.create(
-            model=config.gemini_model,
-            input=user_prompt,
-            system_instruction=SYSTEM_INSTRUCTION,
-            tools=[{"type": "google_search"}],
-        )
-        output_text = interaction.output_text
-        if not output_text:
-            raise ValueError("Empty output received from Gemini API.")
-        return clean_json_response(output_text)
+    # Model candidates in order of reliability and speed
+    candidates = ["gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"]
+    configured_model = config.gemini_model.strip() if config.gemini_model else "gemini-3-flash-preview"
+    models_to_try = [configured_model] + [m for m in candidates if m != configured_model]
 
-    except Exception as e:
-        print(f"[Gemini API Warning] Interaction call encountered: {e}. Falling back to generate_content...")
-        # Fallback to client.models.generate_content
-        response = client.models.generate_content(
-            model=config.gemini_model,
-            contents=[SYSTEM_INSTRUCTION, user_prompt],
-        )
-        return clean_json_response(response.text)
+    # Try client.models.generate_content with structured JSON mode across candidate models
+    for model_name in models_to_try:
+        try:
+            print(f"[Synthesizer] Synthesizing intelligence with model: {model_name}...")
+            gen_config = types.GenerateContentConfig(
+                system_instruction=SYSTEM_INSTRUCTION,
+                response_mime_type="application/json",
+            )
+            response = client.models.generate_content(
+                model=model_name,
+                contents=user_prompt,
+                config=gen_config,
+            )
+            if response.text:
+                parsed = clean_json_response(response.text)
+                return _validate_brief_structure(parsed, current_date)
+        except Exception as err:
+            print(f"[Synthesizer Notice] Model '{model_name}' encountered: {type(err).__name__} ({err}). Trying next candidate...")
+
+    raise RuntimeError("All Gemini API candidate models were temporarily unavailable.")
 
 
 def fallback_offline_synthesis(raw_data: Dict[str, Any], current_date: str) -> Dict[str, Any]:
