@@ -1,6 +1,6 @@
 # ⚡ Autonomous AI & Tech Intelligence Briefing Agent
 
-An autonomous intelligence agent that executes a daily 24-hour sweep of the global artificial intelligence and technology landscape, filters exclusively for high-signal updates with zero fluff, formats a structured executive PDF brief, and emails it daily at **07:00 AM PKT (02:00 UTC)** to `muhammadtalhapro1@gmail.com`.
+An autonomous intelligence agent that executes a daily 24-hour sweep of the global artificial intelligence and technology landscape, filters exclusively for high-signal updates with zero fluff, formats a structured executive PDF brief, and emails it daily at **07:00 AM PKT (02:00 UTC)** to configured recipients.
 
 ---
 
@@ -51,18 +51,23 @@ Copy `.env.example` to `.env` or edit `.env` directly:
 # Obtain from: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# 2. Resend API Key (Required for email delivery via Resend HTTP API)
-# Obtain from: https://resend.com/api-keys
+# 2. Email Delivery Option A: Gmail SMTP (Direct delivery to any external recipient)
+GMAIL_USER=your_email@gmail.com
+GMAIL_APP_PASSWORD=your_16_char_app_password
+
+# 3. Email Delivery Option B: Resend API (HTTP API dispatch)
 RESEND_API_KEY=re_your_api_key_here
 
-# 3. Email Delivery Settings
-RECIPIENT_EMAIL=muhammadtalhapro1@gmail.com
+# 4. Email Recipients (comma-separated or distinct variables)
+OWNER_EMAIL=your_email@gmail.com
+FORWARD_EMAIL=partner@example.com
+RECIPIENT_EMAIL=your_email@gmail.com,partner@example.com
 
-# 4. Schedule Time (24h format, default 07:00 AM)
+# 5. Schedule Time (24h format, default 07:00 AM)
 SCHEDULE_TIME=07:00
 
-# 5. Model Selection (defaults to gemini-3-flash-preview, with automatic fallback)
-GEMINI_MODEL=gemini-3-flash-preview
+# 6. Model Selection (defaults to gemini-3.8-flash, with automatic fallback)
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
 ### GitHub Repository Secrets
@@ -71,9 +76,11 @@ When hosting on GitHub Actions, add these repository secrets under **Settings > 
 | Secret Name | Description | Example / Default |
 |-------------|-------------|-------------------|
 | `GEMINI_API_KEY` | Google AI Studio Gemini API Key | Required |
-| `RESEND_API_KEY` | Resend API Key for sending emails | Required (`re_...`) |
-| `RECIPIENT_EMAIL` | Destination email address | `muhammadtalhapro1@gmail.com` |
-| `GEMINI_MODEL` | (Optional) Primary Gemini model | `gemini-3-flash-preview` |
+| `GMAIL_USER` | (Option A) Gmail Address for SMTP delivery | `your_email@gmail.com` |
+| `GMAIL_APP_PASSWORD` | (Option A) Google 16-character App Password | `xxxx xxxx xxxx xxxx` |
+| `RESEND_API_KEY` | (Option B) Resend API Key for sending emails | `re_...` |
+| `RECIPIENT_EMAIL` | Destination email addresses (comma-separated) | `your_email@gmail.com,partner@example.com` |
+| `GEMINI_MODEL` | (Optional) Primary Gemini model | `gemini-3.8-flash` |
 
 *(Note: `GITHUB_TOKEN` is automatically provided by GitHub Actions to grant 1,000 requests/hr for GitHub Trending aggregation).*
 
