@@ -1,0 +1,175 @@
+{
+  "dispatches": {
+    "2026-11-02": {
+      "date": "2026-11-02",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-11-02.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-11-02_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-11-02_Kashmala.pdf"
+      },
+      "idempotency_keys": {
+        "muhammadtalhapro1@gmail.com": "e8fa6fe65f7ccd8a432b1f4e02fc58e6fd00fe2663c9197fb0e779c22d523a3e",
+        "kashmalatariq887@gmail.com": "ad17b4b09529a66a0f7fa02ae6f984c904f49391e9027f8d3aeaf4c6d2ec6008"
+      },
+      "trace_id": "trace_20261102023359_3d65f3",
+      "last_updated": "2026-11-02T02:34:16.885649+00:00"
+    },
+    "2026-10-28": {
+      "date": "2026-10-28",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-28.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-28_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-28_Kashmala.pdf"
+      },
+      "idempotency_keys": {},
+      "trace_id": "trace_20261102023416_9942bd",
+      "last_updated": "2026-11-02T02:34:36.083942+00:00"
+    },
+    "2026-10-29": {
+      "date": "2026-10-29",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-29.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-29_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-29_Kashmala.pdf"
+      },
+      "idempotency_keys": {},
+      "trace_id": "trace_20261102023436_5d0a1f",
+      "last_updated": "2026-11-02T02:35:19.959232+00:00"
+    },
+    "2026-10-30": {
+      "date": "2026-10-30",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-30.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-30_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-30_Kashmala.pdf"
+      },
+      "idempotency_keys": {},
+      "trace_id": "trace_20261102023519_0f319c",
+      "last_updated": "2026-11-02T02:35:20.173980+00:00"
+    },
+    "2026-11-01": {
+      "date": "2026-11-01",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-11-01.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-11-01_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-11-01_Kashmala.pdf"
+      },
+      "idempotency_keys": {},
+      "trace_id": "trace_20261102023635_4e5696",
+      "last_updated": "2026-11-02T02:37:21.909817+00:00"
+    },
+    "2026-10-26": {
+      "date": "2026-10-26",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-26.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-26_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-26_Kashmala.pdf"
+      },
+      "idempotency_keys": {},
+      "trace_id": "trace_20261102023753_42ccca",
+      "last_updated": "2026-11-02T02:37:54.063213+00:00"
+    },
+    "2026-10-27": {
+      "date": "2026-10-27",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-27.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-27_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-27_Kashmala.pdf"
+      },
+      "idempotency_keys": {},
+      "trace_id": "trace_20261102023754_10f470",
+      "last_updated": "2026-11-02T02:37:54.317286+00:00"
+    },
+    "2026-10-31": {
+      "date": "2026-10-31",
+      "status": "DELIVERED",
+      "target_recipients": [
+        "muhammadtalhapro1@gmail.com",
+        "kashmalatariq887@gmail.com"
+      ],
+      "delivered_recipients": [
+        "kashmalatariq887@gmail.com",
+        "muhammadtalhapro1@gmail.com"
+      ],
+      "failed_recipients": [],
+      "report_paths": {
+        "master": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-31.pdf",
+        "muhammadtalhapro1@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-31_Muhammad.pdf",
+        "kashmalatariq887@gmail.com": "C:\\Users\\muham\\Desktop\\Updates_Agent\\reports\\Daily_AI_Tech_Brief_2026-10-31_Kashmala.pdf"
+      },
+      "idempotency_keys": {},
+      "trace_id": "trace_20261102023754_b4f092",
+      "last_updated": "2026-11-02T02:38:44.202440+00:00"
+    }
+  }
+}

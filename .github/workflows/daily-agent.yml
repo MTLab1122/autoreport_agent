@@ -2,13 +2,21 @@ name: Daily AI & Tech Intelligence Brief
 
 on:
   schedule:
-    # 02:00 UTC = 07:00 AM PKT (Pakistan Standard Time, UTC+5)
-    # Triggers autonomously every morning, even when personal devices are offline
+    # 01:50 UTC = 06:50 AM PKT (Ensures generation & dispatch complete BY 07:00 AM PKT)
+    - cron: '50 1 * * *'
+    # 02:00 UTC = 07:00 AM PKT (Top of hour delivery & verification)
     - cron: '0 2 * * *'
+    # 02:30 UTC = 07:30 AM PKT (Automated catch-up / recovery window)
+    - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Perform dry-run (generate PDF without dispatching live email)'
+        required: false
+        type: boolean
+        default: false
+      catch_up:
+        description: 'Run catch-up audit to identify and deliver missed cycles'
         required: false
         type: boolean
         default: false
@@ -23,7 +31,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   run-daily-brief:
@@ -34,6 +42,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -46,29 +56,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Restore accumulated reports from cache
-        uses: actions/cache@v4
-        with:
-          path: reports/
-          key: reports-cache-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            reports-cache-${{ runner.os }}-
-
       - name: Ensure workspace directories exist
         run: |
-          mkdir -p reports logs
+          mkdir -p reports logs logs/checkpoints
 
       - name: Execute Daily Intelligence Briefing Pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient || secrets.RECIPIENT_EMAIL || 'muhammadtalhapro1@gmail.com' }}
-          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-3-flash-preview' }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+          FORWARD_EMAIL: ${{ secrets.FORWARD_EMAIL }}
+          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient || secrets.RECIPIENT_EMAIL }}
+          TIMEZONE: ${{ secrets.TIMEZONE || 'Asia/Karachi' }}
+          SCHEDULE_TIME: ${{ secrets.SCHEDULE_TIME || '07:00' }}
+          CATCH_UP_MAX_DAYS: ${{ secrets.CATCH_UP_MAX_DAYS || '7' }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-3.8-flash' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           FLAGS="--run-now"
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            FLAGS="--dry-run"
+            FLAGS="$FLAGS --dry-run"
+          fi
+          if [ "${{ github.event.inputs.catch_up }}" = "true" ]; then
+            python main.py --catch-up
           fi
           python main.py $FLAGS
 
@@ -76,7 +88,9 @@ jobs:
         if: failure()
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient || secrets.RECIPIENT_EMAIL || 'muhammadtalhapro1@gmail.com' }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient || secrets.RECIPIENT_EMAIL || secrets.OWNER_EMAIL }}
         run: |
           python -c "
           from emailer import send_failure_alert
@@ -89,12 +103,25 @@ jobs:
                       snippet = f.read()[-1500:]
               except Exception:
                   pass
+          target = os.getenv('RECIPIENT_EMAIL') or os.getenv('GMAIL_USER')
           send_failure_alert(
-              error_message='GitHub Actions daily briefing job encountered an error.',
+              error_message='GitHub Actions daily briefing job encountered an error or failed delivery.',
               log_snippet=snippet,
-              recipient_email=os.getenv('RECIPIENT_EMAIL')
+              recipient_email=target
           )
           " || true
+
+      - name: Persist Generated Reports & Audit Ledger to Repository
+        if: always()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/*.pdf logs/dispatch_ledger.json logs/checkpoints/*.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(brief): auto-archive generated reports and dispatch ledger [skip ci]"
+            git pull --rebase origin main || true
+            git push origin main || true
+          fi
 
       - name: Upload Brief PDFs and Execution Logs as Artifacts
         if: always()
@@ -104,5 +131,6 @@ jobs:
           path: |
             reports/*.pdf
             logs/*.log
+            logs/dispatch_ledger.json
           retention-days: 30
           if-no-files-found: ignore

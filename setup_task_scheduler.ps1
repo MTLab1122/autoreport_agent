@@ -1,14 +1,18 @@
 # PowerShell script to register the AI & Tech Intelligence Brief in Windows Task Scheduler
-# Run this once to ensure daily autonomous execution at 07:00 AM even when terminals are closed.
+# Primary automation runs 24/7 on GitHub Actions cloud infrastructure independently of this PC.
+# This local scheduled task serves as an automatic secondary backup runner with built-in deduplication.
 
 $TaskName = "AITechIntelligenceBrief"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ActionPath = Join-Path $ScriptDir "run_agent.bat"
 $TriggerTime = "07:00AM"
 
+Write-Host "======================================================================"
 Write-Host "Registering Windows Scheduled Task: $TaskName..."
 Write-Host "  Script: $ActionPath"
-Write-Host "  Trigger: Daily at $TriggerTime"
+Write-Host "  Trigger: Daily at $TriggerTime (Asia/Karachi)"
+Write-Host "  Role: Secondary Backup (Primary runs in cloud on GitHub Actions)"
+Write-Host "======================================================================"
 
 $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($existing) {
@@ -20,7 +24,7 @@ $Action = New-ScheduledTaskAction -Execute $ActionPath -WorkingDirectory $Script
 $Trigger = New-ScheduledTaskTrigger -Daily -At $TriggerTime
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Daily 24-hour sweep of AI & Tech landscape, PDF generation, and email to muhammadtalhapro1@gmail.com"
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Daily AI & Tech Intelligence Brief (Local Secondary Backup with automated catch-up & deduplication)"
 
 Write-Host "Task '$TaskName' registered successfully!"
 Write-Host "Status:"

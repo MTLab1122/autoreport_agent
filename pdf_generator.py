@@ -1,7 +1,10 @@
+"""Hardened ReportLab PDF briefing generator with strict XML escaping and path sandboxing."""
+
 import html
+import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -17,16 +20,19 @@ from reportlab.platypus import (
 )
 from reportlab.pdfgen import canvas
 
+from config import config
+from security.sandbox import validate_safe_path
+from security.sanitizer import safe_escape_xml
+
 
 def safe_xml(val: Any) -> str:
-    """Sanitize text for ReportLab XML parser to prevent syntax errors on &, <, >."""
-    if val is None:
-        return ""
-    return html.escape(str(val))
+    """Sanitize text for ReportLab XML parser to prevent syntax crashes or tag escapes."""
+    return safe_escape_xml(str(val) if val is not None else "")
 
 
 class NumberedCanvas(canvas.Canvas):
     """Two-pass canvas to dynamically compute and print total page numbers ('Page X of Y')."""
+    recipient_title: str = "MUHAMMAD TALHA & KASHMALA TARIQ"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,10 +57,12 @@ class NumberedCanvas(canvas.Canvas):
 
         # Running Header (pages > 1)
         if self._pageNumber > 1:
+            safe_title = re.sub(r"[^\w\s\.\-&]", "", self.recipient_title)[:80]
+            header_text = f"DAILY AI & TECH INTELLIGENCE BRIEF — PREPARED FOR {safe_title}"
             self.drawString(
                 42,
                 letter[1] - 26,
-                "DAILY AI & TECH INTELLIGENCE BRIEF — PREPARED FOR MUHAMMAD TALHA",
+                header_text,
             )
             self.setStrokeColor(colors.HexColor("#cbd5e1"))
             self.setLineWidth(0.5)
@@ -74,11 +82,21 @@ class NumberedCanvas(canvas.Canvas):
 
 
 def build_brief_pdf(
-    report_data: Dict[str, Any], output_path: Path
+    report_data: Dict[str, Any],
+    output_path: Path,
+    recipient_name: Optional[str] = None,
+    allowed_dirs: Optional[List[Path]] = None,
 ) -> Path:
-    """Generate a clean, high-contrast, publication-grade PDF briefing document."""
+    """Generate a clean, high-contrast, publication-grade PDF briefing document inside sandboxed boundaries."""
+    # Enforce safe path containment
+    valid_allowed = allowed_dirs or config.get_allowed_directories()
+    safe_target_path = validate_safe_path(output_path, valid_allowed)
+
+    raw_title = recipient_name or "MUHAMMAD TALHA & KASHMALA TARIQ"
+    target_title = re.sub(r"[^\w\s\.\-&]", "", raw_title).upper().strip()
+
     doc = SimpleDocTemplate(
-        str(output_path),
+        str(safe_target_path),
         pagesize=letter,
         leftMargin=42,
         rightMargin=42,
@@ -161,13 +179,11 @@ def build_brief_pdf(
     story = []
 
     # 1. Document Title & Subtitle
-    date_str = report_data.get(
-        "date", datetime.now().strftime("%Y-%m-%d")
-    )
+    date_str = safe_xml(report_data.get("date", datetime.now().strftime("%Y-%m-%d")))
     story.append(Paragraph("DAILY AI &amp; TECH INTELLIGENCE BRIEF", title_style))
     story.append(
         Paragraph(
-            f"DATE: {date_str} &nbsp;|&nbsp; PREPARED FOR: MUHAMMAD TALHA &nbsp;|&nbsp; DELIVERY: 07:00 AM DAILY",
+            f"DATE: {date_str} &nbsp;|&nbsp; PREPARED FOR: {safe_xml(target_title)} &nbsp;|&nbsp; DELIVERY: 07:00 AM DAILY",
             subtitle_style,
         )
     )
@@ -181,7 +197,7 @@ def build_brief_pdf(
         )
     )
 
-    # 2. Executive Summary Box (Top 3 Headlines)
+    # 2. Executive Summary Box (Top Highlights)
     exec_highlights = report_data.get("highlights", [])
     exec_content = [
         Paragraph("<b>EXECUTIVE SUMMARY // TOP 3 HEADLINES OF THE DAY</b>", exec_title_style)
@@ -247,16 +263,19 @@ def build_brief_pdf(
                 summary = safe_xml(item.get("summary", ""))
                 source_url = item.get("source_url", "")
 
-                source_link = (
-                    f' <font color="#1d4ed8"><u><a href="{html.escape(source_url, quote=True)}">(Source)</a></u></font>'
-                    if source_url
-                    else ""
-                )
+                source_link = ""
+                # Only construct link if URL starts with http(s)://
+                if source_url and source_url.startswith(("http://", "https://")):
+                    clean_url = html.escape(source_url, quote=True)
+                    source_link = f' <font color="#1d4ed8"><u><a href="{clean_url}">(Source)</a></u></font>'
 
                 bullet_text = f"&bull; <b>{name}{creator_str}:</b> {summary}{source_link}"
                 story.append(KeepTogether([Paragraph(bullet_text, body_bullet_style)]))
 
         story.append(Spacer(1, 3))
 
-    doc.build(story, canvasmaker=NumberedCanvas)
-    return output_path
+    class DynamicNumberedCanvas(NumberedCanvas):
+        recipient_title = target_title
+
+    doc.build(story, canvasmaker=DynamicNumberedCanvas)
+    return safe_target_path

@@ -40,7 +40,10 @@ share/python-wheels/
 reports/*.pdf
 reports/*.txt
 *.pdf
-logs/
+logs/*.log
+logs/*.jsonl
+!logs/dispatch_ledger.json
+!logs/checkpoints/
 scratch/
 
 # Operating system files
